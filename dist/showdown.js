@@ -1,4 +1,4 @@
-;/*! showdown 27-08-2015 */
+;/*! showdown 25-09-2015 */
 (function(){
 /**
  * Created by Tivie on 13-07-2015.
@@ -1647,7 +1647,7 @@ showdown.subParser('headers', function (text, options, globals) {
 });
 
 /**
- * Turn Markdown image shortcuts into <img> tags.
+ * Turn Markdown image shortcuts into <img>, <audio> or <video> tags.
  */
 showdown.subParser('images', function (text, options, globals) {
   'use strict';
@@ -1687,11 +1687,47 @@ showdown.subParser('images', function (text, options, globals) {
         return wholeMatch;
       }
     }
+    
+    // Search an optional audio: or video: prefix on altText
+    // and set the correct tag name to use
+    var tagname = 'img';
+    if (altText.match(/^video:/)) {
+	    altText = altText.substring(6);
+	    tagname='video';
+    } else if (altText.match(/^audio:/)) {
+	    altText = altText.substring(6);
+	    tagname='audio';
+
+    } else if (altText.match(/^image:/)) {
+	    altText = altText.substring(6);
+    } 
 
     altText = altText.replace(/"/g, '&quot;');
     altText = showdown.helper.escapeCharacters(altText, '*_', false);
     url = showdown.helper.escapeCharacters(url, '*_', false);
-    var result = '<img src="' + url + '" alt="' + altText + '"';
+   
+    if (tagname === 'img') { 
+	    var resultimg = '<img src="' + url + '" alt="' + altText + '"';
+
+	    if (title) {
+	      title = title.replace(/"/g, '&quot;');
+	      title = showdown.helper.escapeCharacters(title, '*_', false);
+	      resultimg += ' title="' + title + '"';
+	    }
+
+	    if (width && height) {
+	      width  = (width === '*') ? 'auto' : width;
+	      height = (height === '*') ? 'auto' : height;
+
+	      resultimg += ' width="' + width + '"';
+	      resultimg += ' height="' + height + '"';
+	    }
+
+	    resultimg += ' />';
+
+	    return resultimg;
+    }
+    var result = '<' + tagname +  ' alt="' + altText + '"';
 
     if (title) {
       title = title.replace(/"/g, '&quot;');
@@ -1707,9 +1743,14 @@ showdown.subParser('images', function (text, options, globals) {
       result += ' height="' + height + '"';
     }
 
-    result += ' />';
+    result += ' controls>';
+    result += '<source src="' + url + '">';
+
+    result += '</' + tagname + '>';
 
     return result;
+    
+
   }
 
   // First, handle reference-style labeled images: ![alt text][id]
